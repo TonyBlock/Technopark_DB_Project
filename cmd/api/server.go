@@ -23,6 +23,7 @@ func CreateServer() *Server {
 }
 
 func (server *Server) Run() {
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 
 	// Postgres
