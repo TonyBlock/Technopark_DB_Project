@@ -26,7 +26,7 @@ func (userStore *UserStore) Update(user *models.User) (err error) {
 		"fullname = COALESCE(NULLIF(TRIM($1), ''), fullname), "+
 		"about = COALESCE(NULLIF(TRIM($2), ''), about), "+
 		"email = COALESCE(NULLIF(TRIM($3), ''), email) "+
-		"WHERE nickname = $4 RETURNING fullname, about, email;",
+		"WHERE LOWER(nickname) = $4 RETURNING fullname, about, email;",
 		user.Fullname, user.About, user.Email, user.Nickname).Scan(&user.Fullname, &user.About, &user.Email)
 }
 
@@ -41,7 +41,7 @@ func (userStore *UserStore) GetAllMatchedUsers(user *models.User) (users *[]mode
 	var usersSlice []models.User
 
 	resultRows, err := userStore.db.Query("SELECT nickname, fullname, about, email FROM users "+
-		"WHERE nickname = $1 OR email = $2;", user.Nickname, user.Email)
+		"WHERE LOWER(nickname) = $1 OR email = $2;", user.Nickname, user.Email)
 	if err != nil {
 		return
 	}
