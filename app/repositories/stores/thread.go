@@ -65,7 +65,7 @@ func (threadStore *ThreadStore) Update(thread *models.Thread) (err error) {
 func (threadStore *ThreadStore) createPartPosts(thread *models.Thread, posts *models.Posts, from, to int, created time.Time, createdFormatted string) (err error) {
 	query := "INSERT INTO posts (parent, author, message, forum, thread, created) VALUES "
 	args := make([]interface{}, 0, 0)
-
+	fmt.Println(from, " ", to)
 	j := 0
 	for i := from; i < to; i++ {
 		(*posts)[i].Forum = thread.Forum
@@ -101,15 +101,17 @@ func (threadStore *ThreadStore) CreatePosts(thread *models.Thread, posts *models
 	created := time.Now()
 	createdFormatted := created.Format(time.RFC3339)
 
-	parts := len(*posts) / 30
+	parts := len(*posts) / 20
 	for i := 0; i < parts+1; i++ {
 		if i == parts {
-			err = threadStore.createPartPosts(thread, posts, i*30, len(*posts), created, createdFormatted)
-			if err != nil {
-				return err
+			if i*20 != len(*posts) {
+				err = threadStore.createPartPosts(thread, posts, i*20, len(*posts), created, createdFormatted)
+				if err != nil {
+					return err
+				}
 			}
 		} else {
-			err = threadStore.createPartPosts(thread, posts, i*30, i*30+30, created, createdFormatted)
+			err = threadStore.createPartPosts(thread, posts, i*20, i*20+20, created, createdFormatted)
 			if err != nil {
 				return err
 			}
