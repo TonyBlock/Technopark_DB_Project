@@ -55,7 +55,7 @@ func (server *Server) Run() {
 	forumUseCase := impl.CreateForumUseCase(forumRepo, threadRepo, userRepo)
 	postUseCase := impl.CreatePostUseCase(postRepo, userRepo, threadRepo, forumRepo)
 	serviceUseCase := impl.CreateServiceUseCase(serviceRepo)
-	threadUseCase := impl.CreateThreadUseCase(threadRepo, voteRepo)
+	threadUseCase := impl.CreateThreadUseCase(threadRepo, voteRepo, postRepo, userRepo)
 
 	// Middlewares
 	router.Use(gin.Recovery())

@@ -29,7 +29,7 @@ func (threadStore *ThreadStore) Create(thread *models.Thread) (err error) {
 func (threadStore *ThreadStore) GetByID(id int64) (thread *models.Thread, err error) {
 	thread = &models.Thread{}
 	err = threadStore.db.QueryRow("SELECT id, title, author, forum, message, votes, slug, created FROM threads "+
-		"WHERE id = $1", id).
+		"WHERE id = $1;", id).
 		Scan(&thread.ID, &thread.Title, &thread.Author, &thread.Forum, &thread.Message, &thread.Votes, &thread.Slug, &thread.Created)
 	return
 }
@@ -37,47 +37,49 @@ func (threadStore *ThreadStore) GetByID(id int64) (thread *models.Thread, err er
 func (threadStore *ThreadStore) GetBySlug(slug string) (thread *models.Thread, err error) {
 	thread = &models.Thread{}
 	err = threadStore.db.QueryRow("SELECT id, title, author, forum, message, votes, slug, created FROM threads "+
-		"WHERE slug = $1", slug).
-		Scan(&thread.Title, &thread.Author, &thread.Forum, &thread.Message, &thread.Votes, &thread.Slug, &thread.Created)
+		"WHERE LOWER(slug) = LOWER($1);", slug).
+		Scan(&thread.ID, &thread.Title, &thread.Author, &thread.Forum, &thread.Message, &thread.Votes, &thread.Slug, &thread.Created)
 	return
 }
 
 func (threadStore *ThreadStore) GetBySlugOrID(slugOrID string) (thread *models.Thread, err error) {
 	thread = &models.Thread{}
 	err = threadStore.db.QueryRow("SELECT id, title, author, forum, message, votes, slug, created FROM threads "+
-		"WHERE id = $1 OR slug = $1", slugOrID).
-		Scan(&thread.Title, &thread.Author, &thread.Forum, &thread.Message, &thread.Votes, &thread.Slug, &thread.Created)
+		"WHERE id = $1 OR LOWER(slug) = LOWER($2);", slugOrID, slugOrID).
+		Scan(&thread.ID, &thread.Title, &thread.Author, &thread.Forum, &thread.Message, &thread.Votes, &thread.Slug, &thread.Created)
 	return
 }
 
 func (threadStore *ThreadStore) GetVotes(id int64) (votesAmount int32, err error) {
-	err = threadStore.db.QueryRow("SELECT votes FROM threads WHERE id = $1", id).Scan(&votesAmount)
+	err = threadStore.db.QueryRow("SELECT votes FROM threads WHERE id = $1;", id).Scan(&votesAmount)
 	return
 }
 
 func (threadStore *ThreadStore) Update(thread *models.Thread) (err error) {
-	_, err = threadStore.db.Exec("UPDATE threads SET"+
+	_, err = threadStore.db.Exec("UPDATE threads SET "+
 		"title = $1, message = $2 WHERE id = $3;", thread.Title, thread.Message, thread.ID)
 	return
 }
 
 func (threadStore *ThreadStore) CreatePosts(thread *models.Thread, posts *models.Posts) (err error) {
-	created := time.Now().Format(time.RFC3339)
-	query := "INSERT INTO posts (parent, author, message, forum, thread, created) VALUES"
+	created := time.Now()
+	createdFormatted := created.Format(time.RFC3339)
+	query := "INSERT INTO posts (parent, author, message, forum, thread, created) VALUES "
 	args := make([]interface{}, 0, 0)
 
 	for i, post := range *posts {
 		(*posts)[i].Forum = thread.Forum
 		(*posts)[i].Thread = thread.ID
-		(*posts)[i].Created = created
-		query += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d)", i*6+1, i*6+2, i*6+3, i*6+4, i*6+5, i*6+6)
-		if i != len(*posts)-1 {
-			query += ", "
+		(*posts)[i].Created = createdFormatted
+		query += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d),", i*6+1, i*6+2, i*6+3, i*6+4, i*6+5, i*6+6)
+		if post.Parent != 0 {
+			args = append(args, post.Parent, post.Author, post.Message, thread.Forum, thread.ID, created)
+		} else {
+			args = append(args, nil, post.Author, post.Message, thread.Forum, thread.ID, created)
 		}
-		args = append(args, post.Parent, post.Author, post.Message, thread.Forum, thread.ID, created)
 	}
+	query = query[:len(query)-1]
 	query += " RETURNING id;"
-
 	resultRows, err := threadStore.db.Query(query, args...)
 	if err != nil {
 		return errors.ErrParentPostNotExist
@@ -85,9 +87,11 @@ func (threadStore *ThreadStore) CreatePosts(thread *models.Thread, posts *models
 	defer resultRows.Close()
 
 	for i := 0; resultRows.Next(); i++ {
-		if err = resultRows.Scan((*posts)[i].ID); err != nil {
+		var id int64
+		if err = resultRows.Scan(&id); err != nil {
 			return
 		}
+		(*posts)[i].ID = id
 	}
 
 	return
@@ -95,7 +99,7 @@ func (threadStore *ThreadStore) CreatePosts(thread *models.Thread, posts *models
 
 func (threadStore *ThreadStore) GetPostsTree(threadID int64, limit, since int, desc bool) (posts *[]models.Post, err error) {
 	var rows *pgx.Rows
-	query := "SELECT id, parent, author, message, is_edited, forum, thread, created FROM posts " +
+	query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts " +
 		"WHERE thread = $1 "
 
 	if since != -1 && desc {
@@ -115,7 +119,7 @@ func (threadStore *ThreadStore) GetPostsTree(threadID int64, limit, since int, d
 	} else {
 		query += " ORDER BY path, id"
 	}
-	query += fmt.Sprintf(" LIMIT NULLIF(%d, 0)", limit)
+	query += fmt.Sprintf(" LIMIT NULLIF(%d, 0);", limit)
 
 	rows, err = threadStore.db.Query(query, threadID)
 	if err != nil {
@@ -146,27 +150,27 @@ func (threadStore *ThreadStore) GetPostsParentTree(threadID int64, limit, since 
 	if since == -1 {
 		if desc {
 			rows, err = threadStore.db.Query(`
-					SELECT id, parent, author, message, is_edited, forum, thread, created FROM posts
-					WHERE path[1] IN (SELECT id FROM post WHERE thread = $1 AND parent = 0 ORDER BY id DESC LIMIT $2)
+					SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts
+					WHERE path[1] IN (SELECT id FROM posts WHERE thread = $1 AND parent IS NULL ORDER BY id DESC LIMIT $2)
 					ORDER BY path[1] DESC, path ASC, id ASC;`, threadID, limit)
 		} else {
 			rows, err = threadStore.db.Query(`
-					SELECT id, parent, author, message, is_edited, forum, thread, created FROM posts
-					WHERE path[1] IN (SELECT id FROM post WHERE thread = $1 AND parent = 0 ORDER BY id ASC LIMIT $2)
+					SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts
+					WHERE path[1] IN (SELECT id FROM posts WHERE thread = $1 AND parent IS NULL ORDER BY id ASC LIMIT $2)
 					ORDER BY path ASC, id ASC;`, threadID, limit)
 		}
 	} else {
 		if desc {
 			rows, err = threadStore.db.Query(`
-					SELECT id, parent, author, message, is_edited, forum, thread, created FROM posts
-					WHERE path[1] IN (SELECT id FROM post WHERE thread = $1 AND parent = 0 AND path[1] <
-					(SELECT path[1] FROM post WHERE id = $2) ORDER BY id DESC LIMIT $3)
+					SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts
+					WHERE path[1] IN (SELECT id FROM posts WHERE thread = $1 AND parent IS NULL AND path[1] <
+					(SELECT path[1] FROM posts WHERE id = $2) ORDER BY id DESC LIMIT $3)
 					ORDER BY path[1] DESC, path ASC, id ASC;`, threadID, since, limit)
 		} else {
 			rows, err = threadStore.db.Query(`
-					SELECT id, parent, author, message, is_edited, forum, thread, created FROM post
-					WHERE path[1] IN (SELECT id FROM post WHERE thread = $1 AND parent = 0 AND path[1] >
-					(SELECT path[1] FROM post WHERE id = $2) ORDER BY id ASC LIMIT $3) 
+					SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts
+					WHERE path[1] IN (SELECT id FROM posts WHERE thread = $1 AND parent IS NULL AND path[1] >
+					(SELECT path[1] FROM posts WHERE id = $2) ORDER BY id ASC LIMIT $3) 
 					ORDER BY path ASC, id ASC;`, threadID, since, limit)
 		}
 	}
@@ -194,8 +198,7 @@ func (threadStore *ThreadStore) GetPostsParentTree(threadID int64, limit, since 
 
 func (threadStore *ThreadStore) GetPostsFlat(threadID int64, limit, since int, desc bool) (posts *[]models.Post, err error) {
 	var rows *pgx.Rows
-	query := "SELECT id, parent, author, message, is_edited, forum, thread, created FROM posts " +
-		"WHERE thread = $1 "
+	query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts WHERE thread = $1 "
 
 	if since != -1 && desc {
 		query += " AND id < $2"
@@ -211,7 +214,7 @@ func (threadStore *ThreadStore) GetPostsFlat(threadID int64, limit, since int, d
 	} else {
 		query += " ORDER BY created, id"
 	}
-	query += fmt.Sprintf(" LIMIT NULLIF(%d, 0)", limit)
+	query += fmt.Sprintf(" LIMIT NULLIF(%d, 0);", limit)
 
 	if since == -1 {
 		rows, err = threadStore.db.Query(query, threadID)

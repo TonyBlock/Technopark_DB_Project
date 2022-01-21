@@ -18,8 +18,9 @@ var (
 	ErrThreadNotFound      = errors.New("Can't find user with id ") // TODO
 
 	// Post errors
-	ErrPostNotFound       = errors.New("Can't find user with id ") // TODO
-	ErrParentPostNotExist = errors.New("Can't find user with id ") // TODO
+	ErrPostNotFound              = errors.New("Can't find user with id ") // TODO
+	ErrParentPostNotExist        = errors.New("Can't find user with id ") // TODO
+	ErrParentPostFromOtherThread = errors.New("Can't find user with id ")
 
 	// User errors
 	ErrUserAlreadyExist = errors.New("user already exist")
@@ -48,8 +49,9 @@ var errorToCodeMap = map[error]int{
 	ErrThreadNotFound:      http.StatusNotFound,
 
 	// Post errors
-	ErrPostNotFound:       http.StatusNotFound,
-	ErrParentPostNotExist: http.StatusNotFound,
+	ErrPostNotFound:              http.StatusNotFound,
+	ErrParentPostNotExist:        http.StatusNotFound,
+	ErrParentPostFromOtherThread: http.StatusConflict,
 
 	// User errors
 	ErrUserAlreadyExist: http.StatusConflict,

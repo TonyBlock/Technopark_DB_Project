@@ -22,8 +22,8 @@ func (forumStore *ForumStore) Create(forum *models.Forum) (err error) {
 }
 
 func (forumStore *ForumStore) GetBySlug(slug string) (forum *models.Forum, err error) {
-	forum = &models.Forum{}
-	err = forumStore.db.QueryRow("SELECT title, user_, slug, posts, threads FROM forums WHERE slug = $1", slug).
+	forum = new(models.Forum)
+	err = forumStore.db.QueryRow("SELECT title, user_, slug, posts, threads FROM forums WHERE LOWER(slug) = LOWER($1);", slug).
 		Scan(&forum.Title, &forum.User, &forum.Slug, &forum.Posts, &forum.Threads)
 	return
 }
@@ -38,11 +38,11 @@ func (forumStore *ForumStore) GetUsers(slug string, limit int, since string, des
 
 	if since != "" {
 		if desc {
-			query += " AND users.nickname <= $2 ORDER BY users.nickname DESC"
+			query += " AND users.nickname < $2 ORDER BY users.nickname DESC"
 		} else {
-			query += " AND users.nickname >= $2 ORDER BY users.nickname"
+			query += " AND users.nickname > $2 ORDER BY users.nickname"
 		}
-		query += " LIMIT = $3;"
+		query += " LIMIT $3;"
 		resultRows, err = forumStore.db.Query(query, slug, since, limit)
 	} else {
 		if desc {
@@ -50,7 +50,7 @@ func (forumStore *ForumStore) GetUsers(slug string, limit int, since string, des
 		} else {
 			query += " ORDER BY users.nickname"
 		}
-		query += " LIMIT = $2;"
+		query += " LIMIT $2;"
 		resultRows, err = forumStore.db.Query(query, slug, limit)
 	}
 
@@ -75,23 +75,23 @@ func (forumStore *ForumStore) GetThreads(slug string, limit int, since string, d
 
 	var resultRows *pgx.Rows
 
-	query := "SELECT id, title, author, forum, message, votes, slug, created FROM threads WHERE forum = $1"
+	query := "SELECT id, title, author, forum, message, votes, slug, created FROM threads WHERE LOWER(forum) = LOWER($1)"
 
 	if since != "" {
 		if desc {
 			query += " AND created <= $2 ORDER BY created DESC"
 		} else {
-			query += " AND created >= $2 ORDER BY created"
+			query += " AND created >= $2 ORDER BY created ASC"
 		}
-		query += " LIMIT = $3;"
+		query += " LIMIT $3;"
 		resultRows, err = forumStore.db.Query(query, slug, since, limit)
 	} else {
 		if desc {
 			query += " ORDER BY created DESC"
 		} else {
-			query += " ORDER BY created"
+			query += " ORDER BY created ASC"
 		}
-		query += " LIMIT = $2;"
+		query += " LIMIT $2;"
 		resultRows, err = forumStore.db.Query(query, slug, limit)
 	}
 
@@ -102,7 +102,7 @@ func (forumStore *ForumStore) GetThreads(slug string, limit int, since string, d
 
 	for resultRows.Next() {
 		thread := models.Thread{}
-		err = resultRows.Scan(&thread.Title, &thread.Author, &thread.Forum, &thread.Message, &thread.Votes, &thread.Slug, &thread.Created)
+		err = resultRows.Scan(&thread.ID, &thread.Title, &thread.Author, &thread.Forum, &thread.Message, &thread.Votes, &thread.Slug, &thread.Created)
 		if err != nil {
 			return
 		}

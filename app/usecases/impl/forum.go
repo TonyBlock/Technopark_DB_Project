@@ -18,13 +18,20 @@ func CreateForumUseCase(forumRepository repositories.ForumRepository, threadRepo
 }
 
 func (forumUseCase *ForumUseCaseImpl) CreateForum(forum *models.Forum) (err error) {
+	user, err := forumUseCase.userRepository.GetByNickname(forum.User)
+	if err != nil {
+		err = errors.ErrUserNotFound
+		return
+	}
+
 	oldForum, err := forumUseCase.forumRepository.GetBySlug(forum.Slug)
-	if err == nil {
-		forum = oldForum
+	if oldForum.Slug != "" {
+		*forum = *oldForum
 		err = errors.ErrForumAlreadyExists
 		return
 	}
 
+	forum.User = user.Nickname
 	err = forumUseCase.forumRepository.Create(forum)
 	return
 }
@@ -38,7 +45,7 @@ func (forumUseCase *ForumUseCaseImpl) Get(slug string) (forum *models.Forum, err
 }
 
 func (forumUseCase *ForumUseCaseImpl) CreateThread(thread *models.Thread) (err error) {
-	_, err = forumUseCase.forumRepository.GetBySlug(thread.Forum)
+	forum, err := forumUseCase.forumRepository.GetBySlug(thread.Forum)
 	if err != nil {
 		err = errors.ErrForumOrTheadNotFound
 		return
@@ -51,12 +58,13 @@ func (forumUseCase *ForumUseCaseImpl) CreateThread(thread *models.Thread) (err e
 	}
 
 	oldThread, err := forumUseCase.threadRepository.GetBySlug(thread.Slug)
-	if err == nil {
-		thread = oldThread
+	if oldThread.Slug != "" {
+		*thread = *oldThread
 		err = errors.ErrThreadAlreadyExists
 		return
 	}
 
+	thread.Forum = forum.Slug
 	err = forumUseCase.threadRepository.Create(thread)
 	return
 }
@@ -73,24 +81,32 @@ func (forumUseCase *ForumUseCaseImpl) GetUsers(slug string, limit int, since str
 		return
 	}
 	users = new(models.Users)
-	*users = *usersSlice
+	if len(*usersSlice) == 0 {
+		*users = []models.User{}
+	} else {
+		*users = *usersSlice
+	}
 
 	return
 }
 
 func (forumUseCase *ForumUseCaseImpl) GetThreads(slug string, limit int, since string, desc bool) (threads *models.Threads, err error) {
-	_, err = forumUseCase.forumRepository.GetBySlug(slug)
+	forum, err := forumUseCase.forumRepository.GetBySlug(slug)
 	if err != nil {
 		err = errors.ErrForumNotExist
 		return
 	}
 
-	threadsSlice, err := forumUseCase.forumRepository.GetThreads(slug, limit, since, desc)
+	threadsSlice, err := forumUseCase.forumRepository.GetThreads(forum.Slug, limit, since, desc)
 	if err != nil {
 		return
 	}
 	threads = new(models.Threads)
-	*threads = *threadsSlice
+	if len(*threadsSlice) == 0 {
+		*threads = []models.Thread{}
+	} else {
+		*threads = *threadsSlice
+	}
 
 	return
 }

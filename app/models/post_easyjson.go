@@ -169,13 +169,45 @@ func easyjson5a72dc82DecodeTechnoparkDBProjectAppModels2(in *jlexer.Lexer, out *
 		}
 		switch key {
 		case "post":
-			(out.Post).UnmarshalEasyJSON(in)
+			if in.IsNull() {
+				in.Skip()
+				out.Post = nil
+			} else {
+				if out.Post == nil {
+					out.Post = new(Post)
+				}
+				(*out.Post).UnmarshalEasyJSON(in)
+			}
 		case "author":
-			(out.Author).UnmarshalEasyJSON(in)
+			if in.IsNull() {
+				in.Skip()
+				out.Author = nil
+			} else {
+				if out.Author == nil {
+					out.Author = new(User)
+				}
+				(*out.Author).UnmarshalEasyJSON(in)
+			}
 		case "thread":
-			(out.Thread).UnmarshalEasyJSON(in)
+			if in.IsNull() {
+				in.Skip()
+				out.Thread = nil
+			} else {
+				if out.Thread == nil {
+					out.Thread = new(Thread)
+				}
+				(*out.Thread).UnmarshalEasyJSON(in)
+			}
 		case "forum":
-			(out.Forum).UnmarshalEasyJSON(in)
+			if in.IsNull() {
+				in.Skip()
+				out.Forum = nil
+			} else {
+				if out.Forum == nil {
+					out.Forum = new(Forum)
+				}
+				(*out.Forum).UnmarshalEasyJSON(in)
+			}
 		default:
 			in.SkipRecursive()
 		}
@@ -193,22 +225,26 @@ func easyjson5a72dc82EncodeTechnoparkDBProjectAppModels2(out *jwriter.Writer, in
 	{
 		const prefix string = ",\"post\":"
 		out.RawString(prefix[1:])
-		(in.Post).MarshalEasyJSON(out)
+		if in.Post == nil {
+			out.RawString("null")
+		} else {
+			(*in.Post).MarshalEasyJSON(out)
+		}
 	}
-	if true {
+	if in.Author != nil {
 		const prefix string = ",\"author\":"
 		out.RawString(prefix)
-		(in.Author).MarshalEasyJSON(out)
+		(*in.Author).MarshalEasyJSON(out)
 	}
-	if true {
+	if in.Thread != nil {
 		const prefix string = ",\"thread\":"
 		out.RawString(prefix)
-		(in.Thread).MarshalEasyJSON(out)
+		(*in.Thread).MarshalEasyJSON(out)
 	}
-	if true {
+	if in.Forum != nil {
 		const prefix string = ",\"forum\":"
 		out.RawString(prefix)
-		(in.Forum).MarshalEasyJSON(out)
+		(*in.Forum).MarshalEasyJSON(out)
 	}
 	out.RawByte('}')
 }

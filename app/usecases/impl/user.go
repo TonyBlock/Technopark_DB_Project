@@ -5,7 +5,6 @@ import (
 	"Technopark_DB_Project/app/repositories"
 	"Technopark_DB_Project/app/usecases"
 	"Technopark_DB_Project/pkg/errors"
-	"Technopark_DB_Project/pkg/validator"
 )
 
 type UserUseCaseImpl struct {
@@ -17,13 +16,9 @@ func CreateUserUseCase(userRepository repositories.UserRepository) usecases.User
 }
 
 func (userUseCase *UserUseCaseImpl) Create(user *models.User) (users *models.Users, err error) {
-	if !validator.ValidateUserData(user, false) {
-		err = errors.ErrBadInputData
-		return
-	}
-
 	usersSlice, err := userUseCase.userRepository.GetAllMatchedUsers(user)
 	if err != nil {
+		err = errors.ErrUserAlreadyExist
 		return
 	} else if len(*usersSlice) > 0 {
 		users = new(models.Users)
@@ -45,14 +40,10 @@ func (userUseCase *UserUseCaseImpl) Get(nickname string) (user *models.User, err
 }
 
 func (userUseCase *UserUseCaseImpl) Update(user *models.User) (err error) {
-	if !validator.ValidateUserData(user, true) {
-		err = errors.ErrBadInputData
-		return
-	}
-
-	_, err = userUseCase.userRepository.GetByNickname(user.Nickname)
-	if err != nil {
+	oldUser, err := userUseCase.userRepository.GetByNickname(user.Nickname)
+	if oldUser.Nickname == "" {
 		err = errors.ErrUserNotFound
+		return
 	}
 
 	err = userUseCase.userRepository.Update(user)

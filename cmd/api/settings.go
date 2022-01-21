@@ -53,7 +53,7 @@ func InitSettings() (settings Settings) {
 		},
 
 		dbPort:     "5432",
-		dbUser:     "Forum_user",
+		dbUser:     "anton",
 		dbPassword: "db_password",
 		dbHost:     "localhost",
 		dbName:     "db_forum",

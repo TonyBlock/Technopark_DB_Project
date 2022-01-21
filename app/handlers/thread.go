@@ -117,7 +117,7 @@ func (threadHandler *ThreadHandler) GetThreadPosts(c *gin.Context) {
 		}
 	}
 	sinceStr := c.Query("since")
-	since := 0
+	since := -1
 	if sinceStr != "" {
 		var err error
 		since, err = strconv.Atoi(sinceStr)
@@ -131,7 +131,7 @@ func (threadHandler *ThreadHandler) GetThreadPosts(c *gin.Context) {
 		sort = "flat"
 	}
 	descStr := c.Query("desc")
-	desc := true
+	desc := false
 	if descStr != "" {
 		var err error
 		desc, err = strconv.ParseBool(descStr)

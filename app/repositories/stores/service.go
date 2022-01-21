@@ -22,8 +22,8 @@ func (serviceStore *ServiceStore) Clear() (err error) {
 
 func (serviceStore *ServiceStore) GetStatus() (status *models.Status, err error) {
 	status = &models.Status{}
-	err = serviceStore.db.QueryRow("(SELECT count(*) FROM users) AS users,"+
-		"SELECT (SELECT count(*) FROM forums) AS forums, "+
+	err = serviceStore.db.QueryRow("SELECT (SELECT count(*) FROM users) AS users, "+
+		"(SELECT count(*) FROM forums) AS forums, "+
 		"(SELECT count(*) FROM threads) AS threads, "+
 		"(SELECT count(*) FROM posts) AS posts;").
 		Scan(&status.User, &status.Forum, &status.Thread, &status.Post)

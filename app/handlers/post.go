@@ -6,6 +6,7 @@ import (
 	"Technopark_DB_Project/pkg/errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/mailru/easyjson"
 
@@ -34,9 +35,13 @@ func (postHandler *PostHandler) GetPost(c *gin.Context) {
 	postIDstr := c.Param("id")
 	postID, err := strconv.Atoi(postIDstr)
 
-	relatedData := c.QueryArray("related")
+	relatedData := c.Query("related")
+	var relatedDataArr []string
+	if relatedData != "" {
+		relatedDataArr = strings.Split(relatedData, ",")
+	}
 
-	postFull, err := postHandler.PostUseCase.Get(int64(postID), &relatedData)
+	postFull, err := postHandler.PostUseCase.Get(int64(postID), &relatedDataArr)
 	if err != nil {
 		c.Data(errors.PrepareErrorResponse(err))
 		return
@@ -56,6 +61,7 @@ func (postHandler *PostHandler) UpdatePost(c *gin.Context) {
 	postID, err := strconv.Atoi(postIDstr)
 	if err != nil {
 		c.Data(errors.PrepareErrorResponse(err))
+		return
 	}
 
 	postUpdate := new(models.PostUpdate)

@@ -22,7 +22,7 @@ func (userStore *UserStore) Create(user *models.User) (err error) {
 }
 
 func (userStore *UserStore) Update(user *models.User) (err error) {
-	return userStore.db.QueryRow("UPDATE users SET"+
+	return userStore.db.QueryRow("UPDATE users SET "+
 		"fullname = COALESCE(NULLIF(TRIM($1), ''), fullname), "+
 		"about = COALESCE(NULLIF(TRIM($2), ''), about), "+
 		"email = COALESCE(NULLIF(TRIM($3), ''), email) "+
@@ -31,9 +31,9 @@ func (userStore *UserStore) Update(user *models.User) (err error) {
 }
 
 func (userStore *UserStore) GetByNickname(nickname string) (user *models.User, err error) {
-	user = &models.User{}
+	user = new(models.User)
 	err = userStore.db.QueryRow("SELECT nickname, fullname, about, email FROM users "+
-		"WHERE nickname = $1;", nickname).Scan(&user.Nickname, &user.Fullname, &user.About, &user.Email)
+		"WHERE LOWER(nickname) = LOWER($1);", nickname).Scan(&user.Nickname, &user.Fullname, &user.About, &user.Email)
 	return
 }
 

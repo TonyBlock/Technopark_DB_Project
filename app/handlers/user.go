@@ -49,8 +49,8 @@ func (userHandler *UserHandler) CreateUser(c *gin.Context) {
 	users, err := userHandler.UserUseCase.Create(user)
 	if err != nil {
 		if errors.ResolveErrorToCode(err) == http.StatusConflict {
-			usersJSON, err := users.MarshalJSON()
-			if err != nil {
+			usersJSON, errInt := users.MarshalJSON()
+			if errInt != nil {
 				c.Data(errors.PrepareErrorResponse(err))
 				return
 			}
@@ -93,7 +93,19 @@ func (userHandler *UserHandler) UpdateUser(c *gin.Context) {
 
 	userUpdate := new(models.UserUpdate)
 	if err := easyjson.UnmarshalFromReader(c.Request.Body, userUpdate); err != nil {
-		c.Data(errors.PrepareErrorResponse(errors.ErrBadRequest))
+		user, err := userHandler.UserUseCase.Get(nickname)
+		if err != nil {
+			c.Data(errors.PrepareErrorResponse(err))
+			return
+		}
+
+		userJSON, err := user.MarshalJSON()
+		if err != nil {
+			c.Data(errors.PrepareErrorResponse(err))
+			return
+		}
+
+		c.Data(http.StatusOK, "application/json; charset=utf-8", userJSON)
 		return
 	}
 

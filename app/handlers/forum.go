@@ -43,8 +43,8 @@ func (forumHandler *ForumHandler) CreateForum(c *gin.Context) {
 	err := forumHandler.ForumUseCase.CreateForum(forum)
 	if err != nil {
 		if errors.ResolveErrorToCode(err) == http.StatusConflict {
-			forumJSON, err := forum.MarshalJSON()
-			if err != nil {
+			forumJSON, errInt := forum.MarshalJSON()
+			if errInt != nil {
 				c.Data(errors.PrepareErrorResponse(err))
 				return
 			}
@@ -95,8 +95,8 @@ func (forumHandler *ForumHandler) CreateThread(c *gin.Context) {
 	err := forumHandler.ForumUseCase.CreateThread(thread)
 	if err != nil {
 		if errors.ResolveErrorToCode(err) == http.StatusConflict {
-			threadJSON, err := thread.MarshalJSON()
-			if err != nil {
+			threadJSON, errInt := thread.MarshalJSON()
+			if errInt != nil {
 				c.Data(errors.PrepareErrorResponse(err))
 				return
 			}
@@ -131,7 +131,7 @@ func (forumHandler *ForumHandler) GetForumUsers(c *gin.Context) {
 	}
 	since := c.Query("since")
 	descStr := c.Query("desc")
-	desc := true
+	desc := false
 	if descStr != "" {
 		var err error
 		desc, err = strconv.ParseBool(descStr)
@@ -171,7 +171,7 @@ func (forumHandler *ForumHandler) GetForumThreads(c *gin.Context) {
 	}
 	since := c.Query("since")
 	descStr := c.Query("desc")
-	desc := true
+	desc := false
 	if descStr != "" {
 		var err error
 		desc, err = strconv.ParseBool(descStr)

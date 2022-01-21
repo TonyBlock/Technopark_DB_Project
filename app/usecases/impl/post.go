@@ -32,11 +32,11 @@ func (postUseCase *PostUseCaseImpl) Get(postID int64, relatedData *[]string) (po
 	postFull = new(models.PostFull)
 	var post *models.Post
 	post, err = postUseCase.postRepository.GetByID(postID)
-	postFull.Post = *post
-
 	if err != nil {
 		err = errors.ErrPostNotFound
 	}
+	postFull.Post = post
+
 	for _, data := range *relatedData {
 		switch data {
 		case "user":
@@ -45,21 +45,21 @@ func (postUseCase *PostUseCaseImpl) Get(postID int64, relatedData *[]string) (po
 			if err != nil {
 				err = errors.ErrUserNotFound
 			}
-			postFull.Author = *author
+			postFull.Author = author
 		case "forum":
 			var forum *models.Forum
 			forum, err = postUseCase.forumRepository.GetBySlug(postFull.Post.Forum)
 			if err != nil {
 				err = errors.ErrForumNotExist
 			}
-			postFull.Forum = *forum
+			postFull.Forum = forum
 		case "thread":
 			var thread *models.Thread
 			thread, err = postUseCase.threadRepository.GetByID(postFull.Post.Thread)
 			if err != nil {
 				err = errors.ErrThreadNotFound
 			}
-			postFull.Thread = *thread
+			postFull.Thread = thread
 		}
 	}
 	return
@@ -72,14 +72,19 @@ func (postUseCase *PostUseCaseImpl) Update(post *models.Post) (err error) {
 		return
 	}
 
-	oldPost.Message = post.Message
+	if post.Message != "" {
+		if oldPost.Message != post.Message {
+			oldPost.IsEdited = true
+		}
+		oldPost.Message = post.Message
 
-	err = postUseCase.postRepository.Update(oldPost)
-	if err != nil {
-		return
+		err = postUseCase.postRepository.Update(oldPost)
+		if err != nil {
+			return
+		}
 	}
 
-	post = oldPost
+	*post = *oldPost
 
 	return
 }
