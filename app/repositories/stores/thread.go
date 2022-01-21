@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx"
+	_ "github.com/lib/pq"
 )
 
 type ThreadStore struct {
@@ -61,22 +62,22 @@ func (threadStore *ThreadStore) Update(thread *models.Thread) (err error) {
 	return
 }
 
-func (threadStore *ThreadStore) CreatePosts(thread *models.Thread, posts *models.Posts) (err error) {
-	created := time.Now()
-	createdFormatted := created.Format(time.RFC3339)
+func (threadStore *ThreadStore) createPartPosts(thread *models.Thread, posts *models.Posts, from, to int, created time.Time, createdFormatted string) (err error) {
 	query := "INSERT INTO posts (parent, author, message, forum, thread, created) VALUES "
 	args := make([]interface{}, 0, 0)
 
-	for i, post := range *posts {
+	j := 0
+	for i := from; i < to; i++ {
 		(*posts)[i].Forum = thread.Forum
 		(*posts)[i].Thread = thread.ID
 		(*posts)[i].Created = createdFormatted
-		query += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d),", i*6+1, i*6+2, i*6+3, i*6+4, i*6+5, i*6+6)
-		if post.Parent != 0 {
-			args = append(args, post.Parent, post.Author, post.Message, thread.Forum, thread.ID, created)
+		query += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d),", j*6+1, j*6+2, j*6+3, j*6+4, j*6+5, j*6+6)
+		if (*posts)[i].Parent != 0 {
+			args = append(args, (*posts)[i].Parent, (*posts)[i].Author, (*posts)[i].Message, thread.Forum, thread.ID, created)
 		} else {
-			args = append(args, nil, post.Author, post.Message, thread.Forum, thread.ID, created)
+			args = append(args, nil, (*posts)[i].Author, (*posts)[i].Message, thread.Forum, thread.ID, created)
 		}
+		j++
 	}
 	query = query[:len(query)-1]
 	query += " RETURNING id;"
@@ -86,13 +87,133 @@ func (threadStore *ThreadStore) CreatePosts(thread *models.Thread, posts *models
 	}
 	defer resultRows.Close()
 
-	for i := 0; resultRows.Next(); i++ {
+	for i := from; resultRows.Next(); i++ {
 		var id int64
 		if err = resultRows.Scan(&id); err != nil {
-			return
+			return err
 		}
 		(*posts)[i].ID = id
 	}
+	return
+}
+
+func (threadStore *ThreadStore) CreatePosts(thread *models.Thread, posts *models.Posts) (err error) {
+	created := time.Now()
+	createdFormatted := created.Format(time.RFC3339)
+
+	parts := len(*posts) / 30
+	for i := 0; i < parts+1; i++ {
+		if i == parts {
+			err = threadStore.createPartPosts(thread, posts, i*30, len(*posts), created, createdFormatted)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = threadStore.createPartPosts(thread, posts, i*30, i*30+30, created, createdFormatted)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	//j := 0
+	//if len(*posts) > 45 {
+	//	half := len(*posts) / 2
+	//	{
+	//		query := "INSERT INTO posts (parent, author, message, forum, thread, created) VALUES "
+	//		args := make([]interface{}, 0, 0)
+	//
+	//		for i := 0; i < half; i++ {
+	//			(*posts)[i].Forum = thread.Forum
+	//			(*posts)[i].Thread = thread.ID
+	//			(*posts)[i].Created = createdFormatted
+	//			query += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d),", i*6+1, i*6+2, i*6+3, i*6+4, i*6+5, i*6+6)
+	//			if (*posts)[i].Parent != 0 {
+	//				args = append(args, (*posts)[i].Parent, (*posts)[i].Author, (*posts)[i].Message, thread.Forum, thread.ID, created)
+	//			} else {
+	//				args = append(args, nil, (*posts)[i].Author, (*posts)[i].Message, thread.Forum, thread.ID, created)
+	//			}
+	//		}
+	//		query = query[:len(query)-1]
+	//		query += " RETURNING id;"
+	//		resultRows, err := threadStore.db.Query(query, args...)
+	//		if err != nil {
+	//			return errors.ErrParentPostNotExist
+	//		}
+	//		defer resultRows.Close()
+	//
+	//		for i := 0; resultRows.Next(); i++ {
+	//			var id int64
+	//			if err = resultRows.Scan(&id); err != nil {
+	//				return err
+	//			}
+	//			(*posts)[i].ID = id
+	//		}
+	//	}
+	//	{
+	//		query := "INSERT INTO posts (parent, author, message, forum, thread, created) VALUES "
+	//		args := make([]interface{}, 0, 0)
+	//
+	//		j := 0
+	//		for i := half; i < len(*posts); i++ {
+	//			(*posts)[i].Forum = thread.Forum
+	//			(*posts)[i].Thread = thread.ID
+	//			(*posts)[i].Created = createdFormatted
+	//			query += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d),", j*6+1, j*6+2, j*6+3, j*6+4, j*6+5, j*6+6)
+	//			if (*posts)[i].Parent != 0 {
+	//				args = append(args, (*posts)[i].Parent, (*posts)[i].Author, (*posts)[i].Message, thread.Forum, thread.ID, created)
+	//			} else {
+	//				args = append(args, nil, (*posts)[i].Author, (*posts)[i].Message, thread.Forum, thread.ID, created)
+	//			}
+	//			j++
+	//		}
+	//		query = query[:len(query)-1]
+	//		query += " RETURNING id;"
+	//		resultRows, err := threadStore.db.Query(query, args...)
+	//		if err != nil {
+	//			return errors.ErrParentPostNotExist
+	//		}
+	//		defer resultRows.Close()
+	//
+	//		for i := half; resultRows.Next(); i++ {
+	//			var id int64
+	//			if err = resultRows.Scan(&id); err != nil {
+	//				return err
+	//			}
+	//			(*posts)[i].ID = id
+	//		}
+	//	}
+	//} else {
+	//	query := "INSERT INTO posts (parent, author, message, forum, thread, created) VALUES "
+	//	args := make([]interface{}, 0, 0)
+	//
+	//	for i, post := range *posts {
+	//		(*posts)[i].Forum = thread.Forum
+	//		(*posts)[i].Thread = thread.ID
+	//		(*posts)[i].Created = createdFormatted
+	//		query += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d),", i*6+1, i*6+2, i*6+3, i*6+4, i*6+5, i*6+6)
+	//		if post.Parent != 0 {
+	//			args = append(args, post.Parent, post.Author, post.Message, thread.Forum, thread.ID, created)
+	//		} else {
+	//			args = append(args, nil, post.Author, post.Message, thread.Forum, thread.ID, created)
+	//		}
+	//	}
+	//	query = query[:len(query)-1]
+	//	query += " RETURNING id;"
+	//	resultRows, err := threadStore.db.Query(query, args...)
+	//	if err != nil {
+	//		return errors.ErrParentPostNotExist
+	//	}
+	//	defer resultRows.Close()
+	//
+	//	for i := 0; resultRows.Next(); i++ {
+	//		var id int64
+	//		if err = resultRows.Scan(&id); err != nil {
+	//			return err
+	//		}
+	//		(*posts)[i].ID = id
+	//	}
+	//}
 
 	return
 }

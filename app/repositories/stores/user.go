@@ -5,6 +5,7 @@ import (
 	"Technopark_DB_Project/app/repositories"
 
 	"github.com/jackc/pgx"
+	_ "github.com/lib/pq"
 )
 
 type UserStore struct {
