@@ -65,7 +65,7 @@ func (threadStore *ThreadStore) Update(thread *models.Thread) (err error) {
 func (threadStore *ThreadStore) createPartPosts(thread *models.Thread, posts *models.Posts, from, to int, created time.Time, createdFormatted string) (err error) {
 	query := "INSERT INTO posts (parent, author, message, forum, thread, created) VALUES "
 	args := make([]interface{}, 0, 0)
-	fmt.Println(from, " ", to)
+
 	j := 0
 	for i := from; i < to; i++ {
 		(*posts)[i].Forum = thread.Forum
@@ -81,19 +81,39 @@ func (threadStore *ThreadStore) createPartPosts(thread *models.Thread, posts *mo
 	}
 	query = query[:len(query)-1]
 	query += " RETURNING id;"
-	resultRows, err := threadStore.db.Query(query, args...)
-	if err != nil {
-		return errors.ErrParentPostNotExist
-	}
-	defer resultRows.Close()
 
-	for i := from; resultRows.Next(); i++ {
-		var id int64
-		if err = resultRows.Scan(&id); err != nil {
-			return err
+	isSuccess := false
+	k := 0
+	for !isSuccess {
+
+		resultRows, err := threadStore.db.Query(query, args...)
+		if err != nil {
+			fmt.Println(err)
+			return errors.ErrParentPostNotExist
 		}
-		(*posts)[i].ID = id
+		defer resultRows.Close()
+
+		for i := from; resultRows.Next(); i++ {
+			isSuccess = true
+			var id int64
+			if err = resultRows.Scan(&id); err != nil {
+				return err
+			}
+			if id == 0 {
+				fmt.Println("HMMM")
+			}
+			(*posts)[i].ID = id
+		}
+		if !isSuccess {
+			fmt.Println("HERE WE FAILED")
+		}
+		k++
+		if k >= 3 {
+			fmt.Println("TOO MUCH")
+			break
+		}
 	}
+
 	return
 }
 
