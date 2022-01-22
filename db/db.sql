@@ -173,81 +173,23 @@ CREATE TRIGGER insert_new_post
     EXECUTE PROCEDURE add_user();
 
 -- INDEXES
---create index if not exists users_nickname_lower on users (LOWER(nickname));
 create index if not exists users_nickname_nickname_email on users (nickname, email);
-
---create index if not exists forums_slug_hash on forums (LOWER(slug));
 
 create index if not exists user_forum_forum on user_forum (forum);
 create index if not exists user_forum_nickname on user_forum (nickname);----
 create index if not exists user_forum_all on user_forum (forum, nickname);
 
---create index if not exists threads_slug on threads (LOWER(slug));
 create index if not exists threads_slug on threads (forum);
 create index if not exists threads_created on threads (created);----
 create index if not exists threads_forum_created on threads (forum, created);
 
--- --create index if not exists posts_thread_created on posts (id, thread, created);---- strange results 9.5/10
--- create index if not exists posts_thread_parent on posts (id, thread, path[1]); --?
--- create index if not exists posts_thread_parent on posts (id, parent, thread); --? -- checked 8/10
--- create index if not exists posts_sorting_desc on posts (id, path, (path[1])); --?
--- --create index if not exists posts_sorting_asc on posts ((path[1]) asc, path, id);---- WOW 11/10
--- create index if not exists posts_thread on posts (thread);----
--- create index if not exists posts_thread_id on posts (thread, id);
--- create index if not exists posts_parent on posts (id, path, thread, (path[1]), parent); --?
--- --create index if not exists posts_thread_created_id ON posts (id, thread, created); --
--- create index if not exists posts_path_id ON posts (id, path);----
--- create index if not exists posts_path_first_path ON posts ((path[1]), path);----
--- create index if not exists posts_thread_path_id on posts (thread, path, id) --
--- create index if not exists posts_thread_path on posts (thread, path); --
-
-
--- --create index if not exists posts_thread_created on posts (id, thread, created); --
--- create index if not exists posts_thread_parent on posts (thread, id, (parent NULLS FIRST));
--- create index if not exists posts_sorting_desc on posts ((path[1]), path, id); --
--- --create index if not exists posts_sorting_asc on posts ((path[1]) asc, path, id); --
--- create index if not exists posts_thread on posts (thread);--
--- create index if not exists posts_parent on posts (thread, id, (path[1]), (parent NULLS FIRST)); --
--- create index if not exists posts_thread_created_id ON posts (thread, id, created); --
--- create index if not exists posts_path_id ON posts (path, id); --
--- create index if not exists posts_path_first_path ON posts ((path[1]), path); --
--- create index if not exists posts_thread_path_id on posts (thread, path);
-
-
--- --CREATE INDEX IF NOT EXISTS posts_thread_id_path1_id_idx ON posts (thread, (path[1]), id); --?
--- CREATE INDEX IF NOT EXISTS posts_thread_id_path1_id_idx ON posts ((path[1]), thread, (path[2:])); --
--- CREATE INDEX IF NOT EXISTS posts_thread_id_path2_id_idx ON posts (path, (path[1]), thread); --
---
--- CREATE INDEX IF NOT EXISTS posts_thread_id_path_idx ON posts (thread, path); --
---
--- CREATE INDEX IF NOT EXISTS posts_thread_id_id_idx ON posts (thread, id); --
---
--- --CREATE INDEX IF NOT EXISTS posts_thread_id_parent_path_idx ON posts (thread, parent, path); --?
--- CREATE INDEX IF NOT EXISTS posts_thread_id_parent_path_idx ON posts (path[1], thread, (parent NULLS FIRST)); --
---
--- --CREATE INDEX IF NOT EXISTS posts_parent_id_idx ON posts (parent, id); --?
-
---CREATE INDEX IF NOT EXISTS posts_id_created_thread_id_idx ON posts (id, created, thread); --?
-
---CREATE INDEX IF NOT EXISTS posts_id_path_idx ON posts (id, path); --?
-
---create index if not exists posts_thread on posts (thread); --example
-
-create index if not exists posts_id_thread on posts (thread, id);
+create index if not exists posts_id_thread on posts (thread, id); --
 create index if not exists posts_id_thread on posts (thread, id, parent NULLS FIRST);
 create index if not exists posts_id_path_path1 on posts (path, (path[1]), id);
 create index if not exists posts_path_path1 on posts (path, (path[1]));
 create index if not exists posts_id_thread_parent_path1 on posts ((path[1]), thread, id, parent NULLS FIRST);
 create index if not exists posts_thread on posts (thread);
 create index if not exists posts_thread_past on posts (thread, path);
-
-
--- CREATE INDEX IF NOT EXISTS post_id_path ON posts(id, (path[1]));
--- CREATE INDEX IF NOT EXISTS post_thread_path_id ON posts(thread, path, id);
--- CREATE INDEX IF NOT EXISTS post_thread_id_path1_parent ON posts(thread, id, (path[1]), parent);
--- CREATE INDEX IF NOT EXISTS post_path1 ON posts((path[1]));
--- CREATE INDEX IF NOT EXISTS post_thr_id ON posts(thread);
--- CREATE INDEX IF NOT EXISTS post_thread_id ON posts(thread, id);
 
 create unique index if not exists votes_key on votes (thread, nickname);
 

@@ -137,25 +137,6 @@ func (threadStore *ThreadStore) CreatePosts(thread *models.Thread, posts *models
 
 func (threadStore *ThreadStore) GetPostsTree(threadID int64, limit, since int, desc bool) (posts *[]models.Post, err error) {
 	var rows *pgx.Rows
-	//query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts " +
-	//	"WHERE thread = $1 "
-	//
-	//if since != -1 && desc {
-	//	query += " AND path < "
-	//} else if since != -1 && !desc {
-	//	query += " AND path > "
-	//}
-	//
-	//if since != -1 {
-	//	query += fmt.Sprintf(` (SELECT path FROM posts WHERE id = %d) `, since)
-	//}
-	//if desc {
-	//	query += " ORDER BY path DESC"
-	//} else if !desc {
-	//	query += " ORDER BY path"
-	//}
-	//
-	//query += fmt.Sprintf(" LIMIT NULLIF(%d, 0);", limit)
 
 	if since == -1 {
 		if desc {
@@ -179,7 +160,6 @@ func (threadStore *ThreadStore) GetPostsTree(threadID int64, limit, since int, d
 		}
 	}
 
-	// rows, err = threadStore.db.Query(query, threadID)
 	if err != nil {
 		return
 	}
@@ -212,20 +192,12 @@ func (threadStore *ThreadStore) GetPostsParentTree(threadID int64, limit, since 
 					WHERE path[1] IN 
 						(SELECT id FROM posts WHERE thread = $1 AND parent IS NULL ORDER BY id DESC LIMIT $2)
 					ORDER BY path[1] DESC, path ASC, id ASC;`, threadID, limit)
-			// rows, err = threadStore.db.Query(`WITH roots AS (SELECT DISTINCT path[1] FROM posts WHERE thread = $1
-			//		ORDER BY path[1] DESC LIMIT $2)
-			//		SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created
-			//		FROM posts WHERE thread = $1 AND path[1] IN (SELECT * FROM roots) ORDER BY path[1] DESC, path[2:];`, threadID, limit)
 		} else {
 			rows, err = threadStore.db.Query(`
 					SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts
 					WHERE path[1] IN 
 						(SELECT id FROM posts WHERE thread = $1 AND parent IS NULL ORDER BY id LIMIT $2)
 					ORDER BY path;`, threadID, limit)
-			// rows, err = threadStore.db.Query(`
-			//		WITH roots AS (SELECT DISTINCT path[1] FROM posts WHERE thread = $1 ORDER BY path[1] LIMIT $2)
-			//		SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created
-			//		FROM posts WHERE thread = $1 AND path[1] IN (SELECT * FROM roots) ORDER BY path;`, threadID, limit)
 		}
 	} else {
 		if desc {
@@ -236,12 +208,6 @@ func (threadStore *ThreadStore) GetPostsParentTree(threadID int64, limit, since 
 							(SELECT path[1] FROM posts WHERE id = $2) 
 						ORDER BY id DESC LIMIT $3)
 					ORDER BY path[1] DESC, path ASC, id ASC;`, threadID, since, limit)
-			// rows, err = threadStore.db.Query(`
-			//		WITH roots AS (SELECT DISTINCT path[1] FROM posts WHERE thread = $1 AND parent IS NULL AND path[1] <
-			//		(SELECT path[1] FROM posts WHERE id = $2) ORDER BY path[1] DESC LIMIT $3)
-			//		SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created
-			//		FROM posts WHERE thread = $1 AND path[1] IN (SELECT * FROM roots) ORDER BY path[1] DESC, path[2:];`,
-			//	threadID, since, limit)
 		} else {
 			rows, err = threadStore.db.Query(`
 					SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts
@@ -250,11 +216,6 @@ func (threadStore *ThreadStore) GetPostsParentTree(threadID int64, limit, since 
 							(SELECT path[1] FROM posts WHERE id = $2) 
 						ORDER BY id LIMIT $3) 
 					ORDER BY path;`, threadID, since, limit)
-			// rows, err = threadStore.db.Query(`
-			//		WITH roots AS (SELECT DISTINCT path[1] FROM posts WHERE thread = $1 AND parent IS NULL AND path[1] >
-			//		(SELECT path[1] FROM posts WHERE id = $2) ORDER BY path[1] LIMIT $3)
-			//		SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created
-			//		FROM posts WHERE thread = $1 AND path[1] IN (SELECT * FROM roots) ORDER BY path;`, threadID, since, limit)
 		}
 	}
 	if err != nil {
@@ -281,21 +242,6 @@ func (threadStore *ThreadStore) GetPostsParentTree(threadID int64, limit, since 
 
 func (threadStore *ThreadStore) GetPostsFlat(threadID int64, limit, since int, desc bool) (posts *[]models.Post, err error) {
 	var rows *pgx.Rows
-	//query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts WHERE thread = $1 "
-	//
-	//if since != -1 && desc {
-	//	query += " AND id < $2"
-	//} else if since != -1 && !desc {
-	//	query += " AND id > $2"
-	//}
-	//
-	//if desc {
-	//	query += " ORDER BY id DESC"
-	//} else if !desc {
-	//	query += " ORDER BY id"
-	//}
-	//
-	//query += fmt.Sprintf(" LIMIT NULLIF(%d, 0);", limit)
 
 	if since == -1 {
 		if desc {
@@ -313,7 +259,6 @@ func (threadStore *ThreadStore) GetPostsFlat(threadID int64, limit, since int, d
 			query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts WHERE thread = $1 AND id > $2 ORDER BY id LIMIT NULLIF($3, 0);"
 			rows, err = threadStore.db.Query(query, threadID, since, limit)
 		}
-		// rows, err = threadStore.db.Query(query, threadID, since)
 	}
 	if err != nil {
 		return
