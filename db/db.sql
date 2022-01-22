@@ -202,13 +202,13 @@ create index if not exists threads_forum_created on threads (forum, created);
 -- create index if not exists posts_thread_path on posts (thread, path); --
 
 
-create index if not exists posts_thread_created on posts (id, thread, created); --
-create index if not exists posts_thread_parent on posts (thread, parent, id);
-create index if not exists posts_sorting_desc on posts ((path[1]) desc, path, id); --
-create index if not exists posts_sorting_asc on posts ((path[1]) asc, path, id); --
+--create index if not exists posts_thread_created on posts (id, thread, created); --
+create index if not exists posts_thread_parent on posts (thread, id, (parent NULLS FIRST));
+create index if not exists posts_sorting_desc on posts ((path[1]), path, id); --
+--create index if not exists posts_sorting_asc on posts ((path[1]) asc, path, id); --
 create index if not exists posts_thread on posts (thread);--
-create index if not exists posts_parent on posts (thread, id, (path[1]), parent); --
-create index if not exists posts_thread_created_id ON posts (id, thread, created); --
+create index if not exists posts_parent on posts (thread, id, (path[1]), (parent NULLS FIRST)); --
+create index if not exists posts_thread_created_id ON posts (thread, id, created); --
 create index if not exists posts_path_id ON posts (path, id); --
 create index if not exists posts_path_first_path ON posts ((path[1]), path); --
 create index if not exists posts_thread_path_id on posts (thread, path);
