@@ -38,7 +38,7 @@ func (threadStore *ThreadStore) GetByID(id int64) (thread *models.Thread, err er
 func (threadStore *ThreadStore) GetBySlug(slug string) (thread *models.Thread, err error) {
 	thread = &models.Thread{}
 	err = threadStore.db.QueryRow("SELECT id, title, author, forum, message, votes, slug, created FROM threads "+
-		"WHERE LOWER(slug) = LOWER($1);", slug).
+		"WHERE slug = $1;", slug).
 		Scan(&thread.ID, &thread.Title, &thread.Author, &thread.Forum, &thread.Message, &thread.Votes, &thread.Slug, &thread.Created)
 	return
 }
@@ -46,7 +46,7 @@ func (threadStore *ThreadStore) GetBySlug(slug string) (thread *models.Thread, e
 func (threadStore *ThreadStore) GetBySlugOrID(slugOrID string) (thread *models.Thread, err error) {
 	thread = &models.Thread{}
 	err = threadStore.db.QueryRow("SELECT id, title, author, forum, message, votes, slug, created FROM threads "+
-		"WHERE id = $1 OR LOWER(slug) = LOWER($2);", slugOrID, slugOrID).
+		"WHERE id = $1 OR slug = $2;", slugOrID, slugOrID).
 		Scan(&thread.ID, &thread.Title, &thread.Author, &thread.Forum, &thread.Message, &thread.Votes, &thread.Slug, &thread.Created)
 	return
 }
@@ -84,6 +84,7 @@ func (threadStore *ThreadStore) createPartPosts(thread *models.Thread, posts *mo
 
 	isSuccess := false
 	k := 0
+
 	for !isSuccess {
 
 		resultRows, err := threadStore.db.Query(query, args...)
@@ -99,17 +100,10 @@ func (threadStore *ThreadStore) createPartPosts(thread *models.Thread, posts *mo
 			if err = resultRows.Scan(&id); err != nil {
 				return err
 			}
-			if id == 0 {
-				fmt.Println("HMMM")
-			}
 			(*posts)[i].ID = id
-		}
-		if !isSuccess {
-			fmt.Println("HERE WE FAILED")
 		}
 		k++
 		if k >= 3 {
-			fmt.Println("TOO MUCH")
 			break
 		}
 	}
@@ -138,133 +132,54 @@ func (threadStore *ThreadStore) CreatePosts(thread *models.Thread, posts *models
 		}
 	}
 
-	//j := 0
-	//if len(*posts) > 45 {
-	//	half := len(*posts) / 2
-	//	{
-	//		query := "INSERT INTO posts (parent, author, message, forum, thread, created) VALUES "
-	//		args := make([]interface{}, 0, 0)
-	//
-	//		for i := 0; i < half; i++ {
-	//			(*posts)[i].Forum = thread.Forum
-	//			(*posts)[i].Thread = thread.ID
-	//			(*posts)[i].Created = createdFormatted
-	//			query += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d),", i*6+1, i*6+2, i*6+3, i*6+4, i*6+5, i*6+6)
-	//			if (*posts)[i].Parent != 0 {
-	//				args = append(args, (*posts)[i].Parent, (*posts)[i].Author, (*posts)[i].Message, thread.Forum, thread.ID, created)
-	//			} else {
-	//				args = append(args, nil, (*posts)[i].Author, (*posts)[i].Message, thread.Forum, thread.ID, created)
-	//			}
-	//		}
-	//		query = query[:len(query)-1]
-	//		query += " RETURNING id;"
-	//		resultRows, err := threadStore.db.Query(query, args...)
-	//		if err != nil {
-	//			return errors.ErrParentPostNotExist
-	//		}
-	//		defer resultRows.Close()
-	//
-	//		for i := 0; resultRows.Next(); i++ {
-	//			var id int64
-	//			if err = resultRows.Scan(&id); err != nil {
-	//				return err
-	//			}
-	//			(*posts)[i].ID = id
-	//		}
-	//	}
-	//	{
-	//		query := "INSERT INTO posts (parent, author, message, forum, thread, created) VALUES "
-	//		args := make([]interface{}, 0, 0)
-	//
-	//		j := 0
-	//		for i := half; i < len(*posts); i++ {
-	//			(*posts)[i].Forum = thread.Forum
-	//			(*posts)[i].Thread = thread.ID
-	//			(*posts)[i].Created = createdFormatted
-	//			query += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d),", j*6+1, j*6+2, j*6+3, j*6+4, j*6+5, j*6+6)
-	//			if (*posts)[i].Parent != 0 {
-	//				args = append(args, (*posts)[i].Parent, (*posts)[i].Author, (*posts)[i].Message, thread.Forum, thread.ID, created)
-	//			} else {
-	//				args = append(args, nil, (*posts)[i].Author, (*posts)[i].Message, thread.Forum, thread.ID, created)
-	//			}
-	//			j++
-	//		}
-	//		query = query[:len(query)-1]
-	//		query += " RETURNING id;"
-	//		resultRows, err := threadStore.db.Query(query, args...)
-	//		if err != nil {
-	//			return errors.ErrParentPostNotExist
-	//		}
-	//		defer resultRows.Close()
-	//
-	//		for i := half; resultRows.Next(); i++ {
-	//			var id int64
-	//			if err = resultRows.Scan(&id); err != nil {
-	//				return err
-	//			}
-	//			(*posts)[i].ID = id
-	//		}
-	//	}
-	//} else {
-	//	query := "INSERT INTO posts (parent, author, message, forum, thread, created) VALUES "
-	//	args := make([]interface{}, 0, 0)
-	//
-	//	for i, post := range *posts {
-	//		(*posts)[i].Forum = thread.Forum
-	//		(*posts)[i].Thread = thread.ID
-	//		(*posts)[i].Created = createdFormatted
-	//		query += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d),", i*6+1, i*6+2, i*6+3, i*6+4, i*6+5, i*6+6)
-	//		if post.Parent != 0 {
-	//			args = append(args, post.Parent, post.Author, post.Message, thread.Forum, thread.ID, created)
-	//		} else {
-	//			args = append(args, nil, post.Author, post.Message, thread.Forum, thread.ID, created)
-	//		}
-	//	}
-	//	query = query[:len(query)-1]
-	//	query += " RETURNING id;"
-	//	resultRows, err := threadStore.db.Query(query, args...)
-	//	if err != nil {
-	//		return errors.ErrParentPostNotExist
-	//	}
-	//	defer resultRows.Close()
-	//
-	//	for i := 0; resultRows.Next(); i++ {
-	//		var id int64
-	//		if err = resultRows.Scan(&id); err != nil {
-	//			return err
-	//		}
-	//		(*posts)[i].ID = id
-	//	}
-	//}
-
 	return
 }
 
 func (threadStore *ThreadStore) GetPostsTree(threadID int64, limit, since int, desc bool) (posts *[]models.Post, err error) {
 	var rows *pgx.Rows
-	query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts " +
-		"WHERE thread = $1 "
+	//query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts " +
+	//	"WHERE thread = $1 "
+	//
+	//if since != -1 && desc {
+	//	query += " AND path < "
+	//} else if since != -1 && !desc {
+	//	query += " AND path > "
+	//}
+	//
+	//if since != -1 {
+	//	query += fmt.Sprintf(` (SELECT path FROM posts WHERE id = %d) `, since)
+	//}
+	//if desc {
+	//	query += " ORDER BY path DESC"
+	//} else if !desc {
+	//	query += " ORDER BY path"
+	//}
+	//
+	//query += fmt.Sprintf(" LIMIT NULLIF(%d, 0);", limit)
 
-	if since != -1 && desc {
-		query += " AND path < "
-	} else if since != -1 && !desc {
-		query += " AND path > "
-	} else if since != -1 {
-		query += " AND path > "
-	}
-	if since != -1 {
-		query += fmt.Sprintf(` (SELECT path FROM posts WHERE id = %d) `, since)
-	}
-	if desc {
-		query += " ORDER BY path DESC"
-	} else if !desc {
-		query += " ORDER BY path ASC, id"
+	if since == -1 {
+		if desc {
+			query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts " +
+				"WHERE thread = $1 ORDER BY path DESC LIMIT NULLIF($2, 0);"
+			rows, err = threadStore.db.Query(query, threadID, limit)
+		} else {
+			query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts " +
+				"WHERE thread = $1 ORDER BY path LIMIT NULLIF($2, 0);"
+			rows, err = threadStore.db.Query(query, threadID, limit)
+		}
 	} else {
-		query += " ORDER BY path, id"
+		if desc {
+			query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts " +
+				"WHERE thread = $1 AND path < (SELECT path FROM posts WHERE id = $2) ORDER BY path DESC LIMIT NULLIF($3, 0);"
+			rows, err = threadStore.db.Query(query, threadID, since, limit)
+		} else {
+			query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts " +
+				"WHERE thread = $1 AND path > (SELECT path FROM posts WHERE id = $2) ORDER BY path LIMIT NULLIF($3, 0);"
+			rows, err = threadStore.db.Query(query, threadID, since, limit)
+		}
 	}
-	query += fmt.Sprintf(" LIMIT NULLIF(%d, 0);", limit)
 
-	rows, err = threadStore.db.Query(query, threadID)
+	// rows, err = threadStore.db.Query(query, threadID)
 	if err != nil {
 		return
 	}
@@ -294,27 +209,52 @@ func (threadStore *ThreadStore) GetPostsParentTree(threadID int64, limit, since 
 		if desc {
 			rows, err = threadStore.db.Query(`
 					SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts
-					WHERE path[1] IN (SELECT id FROM posts WHERE thread = $1 AND parent IS NULL ORDER BY id DESC LIMIT $2)
+					WHERE path[1] IN 
+						(SELECT id FROM posts WHERE thread = $1 AND parent IS NULL ORDER BY id DESC LIMIT $2)
 					ORDER BY path[1] DESC, path ASC, id ASC;`, threadID, limit)
+			// rows, err = threadStore.db.Query(`WITH roots AS (SELECT DISTINCT path[1] FROM posts WHERE thread = $1
+			//		ORDER BY path[1] DESC LIMIT $2)
+			//		SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created
+			//		FROM posts WHERE thread = $1 AND path[1] IN (SELECT * FROM roots) ORDER BY path[1] DESC, path[2:];`, threadID, limit)
 		} else {
 			rows, err = threadStore.db.Query(`
 					SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts
-					WHERE path[1] IN (SELECT id FROM posts WHERE thread = $1 AND parent IS NULL ORDER BY id ASC LIMIT $2)
-					ORDER BY path ASC, id ASC;`, threadID, limit)
+					WHERE path[1] IN 
+						(SELECT id FROM posts WHERE thread = $1 AND parent IS NULL ORDER BY id LIMIT $2)
+					ORDER BY path;`, threadID, limit)
+			// rows, err = threadStore.db.Query(`
+			//		WITH roots AS (SELECT DISTINCT path[1] FROM posts WHERE thread = $1 ORDER BY path[1] LIMIT $2)
+			//		SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created
+			//		FROM posts WHERE thread = $1 AND path[1] IN (SELECT * FROM roots) ORDER BY path;`, threadID, limit)
 		}
 	} else {
 		if desc {
 			rows, err = threadStore.db.Query(`
 					SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts
-					WHERE path[1] IN (SELECT id FROM posts WHERE thread = $1 AND parent IS NULL AND path[1] <
-					(SELECT path[1] FROM posts WHERE id = $2) ORDER BY id DESC LIMIT $3)
+					WHERE path[1] IN 
+						(SELECT id FROM posts WHERE thread = $1 AND parent IS NULL AND path[1] <
+							(SELECT path[1] FROM posts WHERE id = $2) 
+						ORDER BY id DESC LIMIT $3)
 					ORDER BY path[1] DESC, path ASC, id ASC;`, threadID, since, limit)
+			// rows, err = threadStore.db.Query(`
+			//		WITH roots AS (SELECT DISTINCT path[1] FROM posts WHERE thread = $1 AND parent IS NULL AND path[1] <
+			//		(SELECT path[1] FROM posts WHERE id = $2) ORDER BY path[1] DESC LIMIT $3)
+			//		SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created
+			//		FROM posts WHERE thread = $1 AND path[1] IN (SELECT * FROM roots) ORDER BY path[1] DESC, path[2:];`,
+			//	threadID, since, limit)
 		} else {
 			rows, err = threadStore.db.Query(`
 					SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts
-					WHERE path[1] IN (SELECT id FROM posts WHERE thread = $1 AND parent IS NULL AND path[1] >
-					(SELECT path[1] FROM posts WHERE id = $2) ORDER BY id ASC LIMIT $3) 
-					ORDER BY path ASC, id ASC;`, threadID, since, limit)
+					WHERE path[1] IN 
+						(SELECT id FROM posts WHERE thread = $1 AND parent IS NULL AND path[1] >
+							(SELECT path[1] FROM posts WHERE id = $2) 
+						ORDER BY id LIMIT $3) 
+					ORDER BY path;`, threadID, since, limit)
+			// rows, err = threadStore.db.Query(`
+			//		WITH roots AS (SELECT DISTINCT path[1] FROM posts WHERE thread = $1 AND parent IS NULL AND path[1] >
+			//		(SELECT path[1] FROM posts WHERE id = $2) ORDER BY path[1] LIMIT $3)
+			//		SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created
+			//		FROM posts WHERE thread = $1 AND path[1] IN (SELECT * FROM roots) ORDER BY path;`, threadID, since, limit)
 		}
 	}
 	if err != nil {
@@ -341,28 +281,39 @@ func (threadStore *ThreadStore) GetPostsParentTree(threadID int64, limit, since 
 
 func (threadStore *ThreadStore) GetPostsFlat(threadID int64, limit, since int, desc bool) (posts *[]models.Post, err error) {
 	var rows *pgx.Rows
-	query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts WHERE thread = $1 "
-
-	if since != -1 && desc {
-		query += " AND id < $2"
-	} else if since != -1 && !desc {
-		query += " AND id > $2"
-	} else if since != -1 {
-		query += " AND id > $2"
-	}
-	if desc {
-		query += " ORDER BY created DESC, id DESC"
-	} else if !desc {
-		query += " ORDER BY created ASC, id"
-	} else {
-		query += " ORDER BY created, id"
-	}
-	query += fmt.Sprintf(" LIMIT NULLIF(%d, 0);", limit)
+	//query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts WHERE thread = $1 "
+	//
+	//if since != -1 && desc {
+	//	query += " AND id < $2"
+	//} else if since != -1 && !desc {
+	//	query += " AND id > $2"
+	//}
+	//
+	//if desc {
+	//	query += " ORDER BY id DESC"
+	//} else if !desc {
+	//	query += " ORDER BY id"
+	//}
+	//
+	//query += fmt.Sprintf(" LIMIT NULLIF(%d, 0);", limit)
 
 	if since == -1 {
-		rows, err = threadStore.db.Query(query, threadID)
+		if desc {
+			query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts WHERE thread = $1 ORDER BY id DESC LIMIT NULLIF($2, 0);"
+			rows, err = threadStore.db.Query(query, threadID, limit)
+		} else {
+			query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts WHERE thread = $1 ORDER BY id LIMIT NULLIF($2, 0);"
+			rows, err = threadStore.db.Query(query, threadID, limit)
+		}
 	} else {
-		rows, err = threadStore.db.Query(query, threadID, since)
+		if desc {
+			query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts WHERE thread = $1 AND id < $2 ORDER BY id DESC LIMIT NULLIF($3, 0);"
+			rows, err = threadStore.db.Query(query, threadID, since, limit)
+		} else {
+			query := "SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts WHERE thread = $1 AND id > $2 ORDER BY id LIMIT NULLIF($3, 0);"
+			rows, err = threadStore.db.Query(query, threadID, since, limit)
+		}
+		// rows, err = threadStore.db.Query(query, threadID, since)
 	}
 	if err != nil {
 		return

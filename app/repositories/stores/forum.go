@@ -24,7 +24,7 @@ func (forumStore *ForumStore) Create(forum *models.Forum) (err error) {
 
 func (forumStore *ForumStore) GetBySlug(slug string) (forum *models.Forum, err error) {
 	forum = new(models.Forum)
-	err = forumStore.db.QueryRow("SELECT title, user_, slug, posts, threads FROM forums WHERE LOWER(slug) = LOWER($1);", slug).
+	err = forumStore.db.QueryRow("SELECT title, user_, slug, posts, threads FROM forums WHERE slug = $1;", slug).
 		Scan(&forum.Title, &forum.User, &forum.Slug, &forum.Posts, &forum.Threads)
 	return
 }
@@ -76,7 +76,7 @@ func (forumStore *ForumStore) GetThreads(slug string, limit int, since string, d
 
 	var resultRows *pgx.Rows
 
-	query := "SELECT id, title, author, forum, message, votes, slug, created FROM threads WHERE LOWER(forum) = LOWER($1)"
+	query := "SELECT id, title, author, forum, message, votes, slug, created FROM threads WHERE forum = $1"
 
 	if since != "" {
 		if desc {

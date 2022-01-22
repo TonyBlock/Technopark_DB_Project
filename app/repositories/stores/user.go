@@ -27,14 +27,14 @@ func (userStore *UserStore) Update(user *models.User) (err error) {
 		"fullname = COALESCE(NULLIF(TRIM($1), ''), fullname), "+
 		"about = COALESCE(NULLIF(TRIM($2), ''), about), "+
 		"email = COALESCE(NULLIF(TRIM($3), ''), email) "+
-		"WHERE LOWER(nickname) = LOWER($4) RETURNING fullname, about, email;",
+		"WHERE nickname = $4 RETURNING fullname, about, email;",
 		user.Fullname, user.About, user.Email, user.Nickname).Scan(&user.Fullname, &user.About, &user.Email)
 }
 
 func (userStore *UserStore) GetByNickname(nickname string) (user *models.User, err error) {
 	user = new(models.User)
 	err = userStore.db.QueryRow("SELECT nickname, fullname, about, email FROM users "+
-		"WHERE LOWER(nickname) = LOWER($1);", nickname).Scan(&user.Nickname, &user.Fullname, &user.About, &user.Email)
+		"WHERE nickname = $1;", nickname).Scan(&user.Nickname, &user.Fullname, &user.About, &user.Email)
 	return
 }
 
@@ -42,7 +42,7 @@ func (userStore *UserStore) GetAllMatchedUsers(user *models.User) (users *[]mode
 	var usersSlice []models.User
 
 	resultRows, err := userStore.db.Query("SELECT nickname, fullname, about, email FROM users "+
-		"WHERE LOWER(nickname) = LOWER($1) OR email = $2;", user.Nickname, user.Email)
+		"WHERE nickname = $1 OR email = $2;", user.Nickname, user.Email)
 	if err != nil {
 		return
 	}
