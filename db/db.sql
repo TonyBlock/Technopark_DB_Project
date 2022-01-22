@@ -176,14 +176,14 @@ CREATE TRIGGER insert_new_post
 create index if not exists users_nickname_nickname_email on users (nickname, email);
 
 create index if not exists user_forum_forum on user_forum (forum);
-create index if not exists user_forum_nickname on user_forum (nickname);----
+create index if not exists user_forum_nickname on user_forum (nickname);
 create index if not exists user_forum_all on user_forum (forum, nickname);
 
 create index if not exists threads_slug on threads (forum);
-create index if not exists threads_created on threads (created);----
+create index if not exists threads_created on threads (created);
 create index if not exists threads_forum_created on threads (forum, created);
 
-create index if not exists posts_id_thread on posts (thread, id); --
+create index if not exists posts_id_thread on posts (thread, id);
 create index if not exists posts_id_thread on posts (thread, id, parent NULLS FIRST);
 create index if not exists posts_id_path_path1 on posts (path, (path[1]), id);
 create index if not exists posts_path_path1 on posts (path, (path[1]));
