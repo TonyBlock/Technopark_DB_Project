@@ -211,25 +211,25 @@ func (threadStore *ThreadStore) GetPostsParentTree(threadID int64, limit, since 
 					ORDER BY path[1] DESC, path ASC, id ASC;`, threadID, limit)
 		} else {
 			rows, err = threadStore.db.Query(`
-					SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts
+					SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts 
 					WHERE path[1] IN 
-						(SELECT id FROM posts WHERE thread = $1 AND parent IS NULL ORDER BY id LIMIT $2)
+						(SELECT id FROM posts WHERE thread = $1 AND parent IS NULL ORDER BY id LIMIT $2) 
 					ORDER BY path;`, threadID, limit)
 		}
 	} else {
 		if desc {
 			rows, err = threadStore.db.Query(`
-					SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts
+					SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts 
 					WHERE path[1] IN 
 						(SELECT id FROM posts WHERE thread = $1 AND parent IS NULL AND path[1] < 
  							(SELECT path[1] FROM posts WHERE id = $2) 
-						ORDER BY id DESC LIMIT $3)
+						ORDER BY id DESC LIMIT $3) 
 					ORDER BY path[1] DESC, path ASC, id ASC;`, threadID, since, limit)
 		} else {
 			rows, err = threadStore.db.Query(`
-					SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts
+					SELECT id, COALESCE(parent, 0), author, message, is_edited, forum, thread, created FROM posts 
 					WHERE path[1] IN 
-						(SELECT id FROM posts WHERE thread = $1 AND parent IS NULL AND path[1] < 
+						(SELECT id FROM posts WHERE thread = $1 AND parent IS NULL AND path[1] > 
  							(SELECT path[1] FROM posts WHERE id = $2) 
 						ORDER BY id LIMIT $3) 
 					ORDER BY path;`, threadID, since, limit)
