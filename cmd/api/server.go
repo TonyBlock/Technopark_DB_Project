@@ -33,7 +33,7 @@ func (server *Server) Run() {
 	}
 	postgresConnection, err := pgx.NewConnPool(pgx.ConnPoolConfig{
 		ConnConfig:     conn,
-		MaxConnections: 800,
+		MaxConnections: 1000,
 		AfterConnect:   nil,
 		AcquireTimeout: 0,
 	})
